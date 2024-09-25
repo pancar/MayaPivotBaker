@@ -1,0 +1,401 @@
+string $toolCreate = "createTool";
+string $toolName  = "PivotBake";
+
+if(`window -exists $toolCreate`)
+{
+	deleteUI $toolCreate;
+}
+
+window -t $toolName -w 400 -h 400 $toolCreate;
+
+frameLayout -bgc 0.2 0.2 0.2 -label "Vertex Color" -bv true -cll 1 -cl 0;
+
+gridLayout -nc 5 -cwh 70 22;
+
+//columnLayout -adjustableColumn true;
+
+$vertexColorChannels = `radioCollection`;
+
+global int $selectedChannel;
+ 
+//create buttons with command to set var
+radioButton -l "Red" -bgc 0.6 0.2 0.2 -onc "$selectedChannel = 1";
+radioButton -l "Green" -bgc 0.2 0.6 0.2 -onc "$selectedChannel = 2";
+radioButton -l "Blue" -bgc 0.2 0.2 0.6 -onc "$selectedChannel = 3";
+radioButton -l "Alpha" -bgc 0.2 0.2 0.2 -sl -onc "$selectedChannel = 4";
+
+
+global string $floatFieldName="ChannelVal"; 
+$floatFieldName = `floatField -changeCommand "floatValueChanged();"`;
+ 
+setParent ..;
+
+
+gridLayout -nc 4 -cwh 88 22;
+//columnLayout -adjustableColumn true ;
+button -rs true -ann "shshshs" -label "Gradient Y Axis" -c "VCGradient";
+
+button -h 1 -label "Set Value" -c "VCSetValue";
+
+setParent ..;
+
+frameLayout -bgc 0.2 0.2 0.2 -l "UV" -bv true -cll 1 -cl 0;
+
+columnLayout -adjustableColumn true;
+
+//string $pivotName;
+//$pivotName = `textFieldGrp -columnWidth 1 60 -columnAlign 1 "left" -label "Pivot Name" `;
+ 
+button -bgc 0.4 .0 .0 -hlc 1.0 1.0 0.0 -label "Create UV channels" -c "CreateUVChannels";
+
+gridLayout -nc 4 -cwh 88 22;
+
+$pivots = `radioCollection`;
+
+global int $selectedPivot;
+
+//create buttons with command to set var
+radioButton -l "Pivot1" -sl -onc "$selectedPivot = 1";
+radioButton -l "Pivot2" -onc "$selectedPivot = 2";
+radioButton -l "Pivot3" -onc "$selectedPivot = 3";
+radioButton -l "Pivot4" -onc "$selectedPivot = 4";
+
+//gridLayout -nc 4 -cwh 88 22;
+
+global int $pivotType;
+
+
+//radioButton -l "External Object" -sl -onc "$pivotType = 0";
+//radioButton -l "Object Pivot" -onc "$pivotType = 1";
+
+//optionMenu -label "Menu";
+//menuItem -label "Options" -parent "My Menu";
+// optionMenu -label "Select Option" -parent "Options" -radialMenu true;
+///	    menuItem -label "Option 1" -parent "Select Option" -c "setAttr -type 'int' optionVal 1";
+
+
+
+setParent ..;
+
+gridLayout -nc 4 -cwh 88 22;
+
+button -label "Bake Pivot" -c "BakePivotToPivot";
+button -label "Select UVs" -c "SelectUVs";
+
+//button -label "Pivot4" -c "cutton_CTRLMaker_Clicked";
+
+setParent ..;
+
+
+frameLayout -bgc 0.2 0.2 0.2 -label "Object" -bv true -cll 1 -cl 0;
+
+gridLayout -nc 4 -cwh 88 22;
+button -label "Pivot to Bottom" -c "MovePivotToBottom";
+button - label "Move To Zero" - c "MoveToZero";
+
+
+setParent ..;
+
+showWindow $toolCreate;
+
+
+global proc CreateUVChannels() {
+		
+		
+	for ($i = 2; $i <= 8; $i++) {
+	
+		string $mapName = "map" + string($i);
+		polyUVSet -create -uvSet $mapName;
+		polyUVSet -currentUVSet -uvSet $mapName;
+		ConvertSelectionToFaces;
+		polyProjection -ch 1 -type Planar -ibd on -kir  -md y;
+				
+		print ($mapName + " created");
+	}
+	
+	
+}
+
+global proc floatValueChanged() {
+				global string $floatFieldName;
+				$value = `floatField -query -value $floatFieldName`;
+				//print("newValue="+ $value +"\n");
+			}
+
+global proc cutton_CTRLMaker_Clicked(){
+	
+	// print($selectedChannel);
+	
+	string $sel[] = `ls -sl`;
+	//print $sel[0];
+	float $pos[] = `xform -q -ws -scalePivot $sel[0]`;
+	print $pos[1];
+   
+}
+
+global proc SelectUVs(){
+	
+	ConvertSelectionToUVs;	
+	   
+}
+
+
+global proc MoveToZero(){
+$obj =`ls - sl`;
+	move - rpr 0 0 0 $obj;
+
+}
+
+
+
+global proc BakePivotToPivot()
+{
+	
+	string $sel[] = `ls -sl`;
+	string $pivot = "pivot";
+	////select $pivot;
+ 	float $pos[] = `xform -q -t -ws $pivot`;	
+ 	$pos[0] = $pos[0] * -1.0;
+
+	   
+	global int $selectedPivot;
+	if($selectedPivot == 1)//pivot1 uv3.uv uv4.u
+	{
+		
+		string $uv3 = "map3";
+		polyUVSet -currentUVSet -uvSet $uv3;		
+	
+		select $sel;
+	
+		polyEditUV -relative false -uValue $pos[0] -vValue $pos[1];//x y
+		
+		string $uv4 = "map4";
+	
+		polyUVSet -currentUVSet -uvSet $uv4;
+		select $sel;
+		
+		polyEditUV -relative false -uValue $pos[2];//z
+		
+		print($pos[0] + " "+ $pos[1]+" " + $pos[2]);
+		
+	}else if($selectedPivot == 2){//pivot2 uv4.v uv5.uv
+		
+		string $uv4 = "map4";
+		   
+		polyUVSet -currentUVSet -uvSet $uv4;
+		
+		select $sel;
+	
+		polyEditUV -relative false -vValue $pos[0];//x
+	
+		string $uv5 = "map5";
+		
+		polyUVSet -currentUVSet -uvSet $uv5;
+		
+		select $sel;
+		
+		polyEditUV -relative false -uValue $pos[1] -vValue $pos[2];//y z
+		
+		print($pos[0] + " "+ $pos[1]+" " + $pos[2]);
+		
+		
+	}else if($selectedPivot == 3){//pivot3 uv6.uv uv7.u
+		
+		string $uv6 = "map6";
+		   
+		polyUVSet -currentUVSet -uvSet $uv6;
+		
+		select $sel;
+		
+		polyEditUV -relative false -uValue $pos[0] -vValue $pos[1];//xy
+		
+				
+		string $uv7 = "map7";
+
+		polyUVSet -currentUVSet -uvSet $uv7;
+		
+		select $sel;
+		
+		polyEditUV -relative false -uValue $pos[2];//z
+		
+		print($pos[0] + " "+ $pos[1]+" " + $pos[2]);
+		
+		
+	}else if($selectedPivot == 4){//pivot4 uv7.v uv8.uv
+		
+		string $uv7 = "map7";
+		
+		   
+		polyUVSet -currentUVSet -uvSet $uv7;
+		
+		select $sel;
+		
+		polyEditUV -relative false -vValue $pos[0];//x
+		
+		
+		string $uv8 = "map8";
+	
+		polyUVSet -currentUVSet -uvSet $uv8;
+		
+		select $sel;
+		
+		polyEditUV -relative false -uValue $pos[1] -vValue $pos[2];//y z
+	
+		print($pos[0] + " "+ $pos[1]+" " + $pos[2]);
+		
+		
+	}
+	   
+}
+
+
+
+
+
+
+global proc float inverseLerp(float $a,float $b,float $alpha){
+	
+	
+	$first = $alpha - $a;
+	$second = $b - $a;
+	
+	if($second == 0){
+		$second = 0.0001;
+	}
+	
+//	$inverseLerp = ($alpha - $a)/($b - $a);
+	$inverseLerp = $first / $second;
+	return $inverseLerp;
+	
+}
+
+global proc VCSetValue(){
+	
+	ConvertSelectionToVertices;
+	
+	global string $floatFieldName;
+	$value = `floatField -query -value $floatFieldName`;
+				
+	
+	global int $selectedChannel;
+	if($selectedChannel == 1)//red
+	{
+
+		polyColorPerVertex -r $value;
+	}else if($selectedChannel == 2){
+		polyColorPerVertex -g $value;
+	}else if($selectedChannel == 3){
+		polyColorPerVertex -b $value;
+	}else if($selectedChannel == 4){
+		polyColorPerVertex -a $value;
+			}
+	
+	}
+
+
+global proc MovePivotToBottom(){
+	
+	 string $sel[]= `ls -sl`;
+
+    //$sel[0] != "" to check if the first item is empty, but `size $sel` == 1 already cover that
+    if(`size $sel` > 0)
+    {
+        int $vtxIdx;
+        int $vCount[];
+        float $lowestY = 2147483647.0;
+        float  $crtY = 0.0;
+        float $pos[];
+
+        string $item;
+        for ($item in $sel)
+        {
+            $vCount = `polyEvaluate -vertex $item`; //Get vertex count
+            for ($vtxIdx = 0; $vtxIdx < $vCount[0]; $vtxIdx++)//Loop through vetex
+            {
+                $pos = `xform -q -ws -t ($item+".vtx["+$vtxIdx+"]")`;//Get vertex position
+                $crtY = $pos[1];
+                if($crtY < $lowestY)
+                {
+                    $lowestY = $crtY;//Get the lowest Y
+                }
+            }
+            $pos = `xform -q -ws -t ($item)`;
+            xform -ws -a -piv $pos[0] $lowestY $pos[2] ($item);
+            print ($lowestY);
+        }
+
+    }
+    
+//    select -r $sel.vtx[10] ;
+}
+
+global proc VCGradient(){
+	 
+	string $sel[]= `ls -sl`;
+	
+	if(`size $sel` > 0)
+	{
+		int $vtxIdx;
+	             
+		int $vCount[];
+		float $lowestY = 2147483647.0;
+		float $highestY = -2147483647.0;
+		float  $crtY = 0.0;
+		float $pos[];
+
+		string $item;
+	//for ($item in $sel)
+	//{
+		
+		$item = $sel[0];
+		$vCount = `polyEvaluate -vertex $item`; //Get vertex count
+		for ($vtxIdx = 0; $vtxIdx < $vCount[0]; $vtxIdx++)//Loop through vetex
+		{
+			
+			$pos = `xform -q -ws -t ($item+".vtx["+$vtxIdx+"]")`;//Get vertex position
+		
+			$crtY = $pos[1];
+			if($crtY < $lowestY)
+			{
+				$lowestY = $crtY;//Get the lowest Y
+			}
+			if($crtY > $highestY)
+			{
+				$highestY = $crtY;//Get the lowest Y
+			}
+		
+		}
+
+		print("lowestY " + $lowestY + "\n" + " highestY " + $highestY + "\n" );
+		
+		float $VCHeigh;
+		
+		for ($vtxIdx = 0; $vtxIdx < $vCount[0]; $vtxIdx++)//Loop through vetex
+		{
+			
+			$pos = `xform -q -ws -t ($item+".vtx["+$vtxIdx+"]")`;//Get vertex position
+                
+			$crtY = $pos[1];
+			$VCHeight = inverseLerp($lowestY,$highestY,$crtY);
+			select -r $item.vtx[$vtxIdx];
+			
+			global int $selectedChannel;
+			if($selectedChannel == 1)//red
+			{
+				polyColorPerVertex -nun -r $VCHeight ($item+".vtx["+$vtxIdx+"]") ;
+			}else if($selectedChannel == 2){
+				polyColorPerVertex -nun -g $VCHeight ($item+".vtx["+$vtxIdx+"]") ;
+			}else if($selectedChannel == 3){
+				polyColorPerVertex -nun -b $VCHeight ($item+".vtx["+$vtxIdx+"]") ;
+			}else if($selectedChannel == 4){
+				polyColorPerVertex -nun -a $VCHeight ($item+".vtx["+$vtxIdx+"]") ;
+			}
+			
+			//print($vtxIdx +" "+ $VCHeight + "\n");
+			//string  $c[] = polyColorPerVertex -q -r -g -b -a $item.vtx[$vtxIdx];    
+		}         
+}
+    
+//    select -r $sel.vtx[10] ;
+	
+}
